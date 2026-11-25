@@ -1,0 +1,26 @@
+{
+  "name": "claimproof-agent",
+  "version": "0.1.0",
+  "description": "Autonomous Consumer Automation agent (Telegraph Hackathon Season II — Mission 15) that buys verified flight disruption reports, fare rules, and rebooking options via Telegraph x402 and generates ready-to-file refund claims with cryptographic receipts.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "tsx src/server.ts",
+    "wallet:new": "tsx src/generate-wallet.ts",
+    "claim": "tsx src/cli.ts",
+    "test:probe": "tsx src/probe.ts"
+  },
+  "dependencies": {
+    "@x402/evm": "^2.0.0",
+    "@x402/fetch": "^2.0.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "viem": "^2.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

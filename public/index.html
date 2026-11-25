@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClaimProof Agent — Autonomous Flight Refund Claims via Telegraph x402</title>
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --card: #131823;
+      --card2: #192030;
+      --border: #263047;
+      --text: #e6edf7;
+      --muted: #8b9bb4;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 18px;
+      margin-bottom: 24px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      font-size: 11px;
+      font-family: var(--mono);
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .wallet-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      min-width: 280px;
+    }
+    .wallet-bar .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .wallet-bar .row:last-child { margin-bottom: 0; }
+    .ok { color: var(--green); }
+    .warn { color: var(--amber); }
+    .err { color: var(--red); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .preset-btn {
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .preset-btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      margin-top: 10px;
+    }
+    input, select {
+      width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 10px;
+      font-size: 13px;
+      font-family: var(--sans);
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .checkbox-row input { width: auto; }
+    button.primary {
+      width: 100%;
+      margin-top: 16px;
+      background: var(--accent);
+      color: #06101a;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      padding: 11px 14px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button.primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .step-item {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px 14px;
+    }
+    .step-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .step-meta {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .step-answer {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #d6e2f5;
+      white-space: pre-wrap;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 9px 10px;
+      max-height: 180px;
+      overflow: auto;
+    }
+    .cost-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 700px) {
+      .cost-strip { grid-template-columns: 1fr 1fr; }
+    }
+    .metric {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+    }
+    .metric .k { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+    .metric .v { font-family: var(--mono); font-size: 16px; font-weight: 700; margin-top: 3px; }
+    .claim-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .actions button {
+      background: var(--card2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .actions button:hover { border-color: var(--accent); color: var(--accent); }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .empty { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1>ClaimProof Agent <span class="badge">Telegraph H2 · Mission 15</span></h1>
+        <p>Autonomous flight-disruption refund agent — buys verified intelligence via Telegraph x402 (Base Sepolia USDC) &amp; attaches cryptographic receipts to your claim.</p>
+      </div>
+      <div class="wallet-bar" id="walletBar">
+        <div class="row"><span>Network:</span><span>Base Sepolia (eip155:84532)</span></div>
+        <div class="row"><span>Agent Wallet:</span><span id="wAddr">Loading...</span></div>
+        <div class="row"><span>Test USDC Balance:</span><span id="wBal">...</span></div>
+        <div class="row"><span>Ledger Total Spent:</span><span id="wSpent">$0.00</span></div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Flight Disruption Input</h2>
+        <div class="presets">
+          <button class="preset-btn" type="button" onclick="loadPreset('lh400')">LH400 FRA→JFK (EU261)</button>
+          <button class="preset-btn" type="button" onclick="loadPreset('ba117')">BA117 LHR→JFK (Cancel)</button>
+          <button class="preset-btn danger" type="button" onclick="loadPreset('cap')">Test Budget-Cap Failure</button>
+        </div>
+
+        <form id="claimForm">
+          <div class="two-col">
+            <div>
+              <label>Flight Number</label>
+              <input id="flightNumber" value="LH400" required />
+            </div>
+            <div>
+              <label>Airline</label>
+              <input id="airline" value="Lufthansa" required />
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <label>Origin (IATA)</label>
+              <input id="origin" value="FRA" required />
+            </div>
+            <div>
+              <label>Destination (IATA)</label>
+              <input id="destination" value="JFK" required />
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <label>Flight Date</label>
+              <input id="date" type="date" value="2026-11-25" required />
+            </div>
+            <div>
+              <label>Ticket Price (USD)</label>
+              <input id="ticketPriceUsd" type="number" value="780" min="1" required />
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <label>Fare Class</label>
+              <select id="fareClass">
+                <option value="Economy Light (Non-refundable)">Economy Light</option>
+                <option value="Economy Flex">Economy Flex</option>
+                <option value="Business Class">Business Class</option>
+              </select>
+            </div>
+            <div>
+              <label>Booking Ref (PNR)</label>
+              <input id="bookingRef" value="XK94LM" required />
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <label>Passenger Name</label>
+              <input id="passengerName" value="Alex Rivera" required />
+            </div>
+            <div>
+              <label>Max Budget Cap ($)</label>
+              <input id="maxBudgetUsd" type="number" step="0.01" min="0" max="1" value="0.03" required />
+            </div>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="includeRebooking" checked />
+            <label for="includeRebooking" style="margin:0;color:var(--text);">Also buy live rebooking availability (+$0.01)</label>
+          </div>
+
+          <button class="primary" id="runBtn" type="submit">Run Autonomous ClaimProof Agent</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>
+          <span>Execution &amp; Cryptographic Receipt</span>
+          <span class="badge" id="statusBadge">IDLE</span>
+        </h2>
+
+        <div id="resultArea">
+          <div class="empty">
+            Click <b>Run Autonomous ClaimProof Agent</b> to execute live Telegraph x402 intelligence purchases ($0.01/intent) and generate a ready-to-file refund claim packet.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lastResult = null;
+
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        document.getElementById('wAddr').innerHTML = data.walletAddress
+          ? `<a href="https://sepolia.basescan.org/address/${data.walletAddress}" target="_blank">${data.walletAddress.slice(0,8)}...${data.walletAddress.slice(-6)}</a>`
+          : '<span class="err">Not configured</span>';
+        const balNum = Number(data.usdcBalance ?? 0);
+        document.getElementById('wBal').innerHTML = balNum >= 0.03
+          ? `<span class="ok">$${balNum.toFixed(4)} USDC</span>`
+          : `<span class="warn">$${balNum.toFixed(4)} USDC (fund at faucet.circle.com)</span>`;
+        document.getElementById('wSpent').textContent = `$${Number(data.ledgerTotalUsd ?? 0).toFixed(2)} (${data.ledgerCount ?? 0} runs)`;
+      } catch (e) {
+        document.getElementById('wAddr').innerHTML = '<span class="err">Server error</span>';
+      }
+    }
+
+    function loadPreset(name) {
+      if (name === 'lh400') {
+        flightNumber.value = 'LH400'; airline.value = 'Lufthansa';
+        origin.value = 'FRA'; destination.value = 'JFK';
+        ticketPriceUsd.value = 780; bookingRef.value = 'XK94LM';
+        maxBudgetUsd.value = '0.03'; includeRebooking.checked = true;
+      } else if (name === 'ba117') {
+        flightNumber.value = 'BA117'; airline.value = 'British Airways';
+        origin.value = 'LHR'; destination.value = 'JFK';
+        ticketPriceUsd.value = 940; bookingRef.value = 'BR72QP';
+        maxBudgetUsd.value = '0.03'; includeRebooking.checked = true;
+      } else if (name === 'cap') {
+        flightNumber.value = 'LH400'; airline.value = 'Lufthansa';
+        origin.value = 'FRA'; destination.value = 'JFK';
+        ticketPriceUsd.value = 780; bookingRef.value = 'CAP001';
+        maxBudgetUsd.value = '0.01'; includeRebooking.checked = true;
+      }
+    }
+
+    document.getElementById('claimForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('runBtn');
+      const badge = document.getElementById('statusBadge');
+      const area = document.getElementById('resultArea');
+      btn.disabled = true;
+      badge.textContent = 'PURCHASING VIA X402...';
+      area.innerHTML = '<div class="empty">Signing x402 EIP-3009 authorizations and querying Telegraph Protocol miners on Base Sepolia... (10–30s)</div>';
+
+      try {
+        const payload = {
+          flightNumber: flightNumber.value.trim(),
+          airline: airline.value.trim(),
+          origin: origin.value.trim().toUpperCase(),
+          destination: destination.value.trim().toUpperCase(),
+          date: date.value,
+          ticketPriceUsd: Number(ticketPriceUsd.value),
+          fareClass: fareClass.value,
+          bookingRef: bookingRef.value.trim(),
+          passengerName: passengerName.value.trim(),
+          maxBudgetUsd: Number(maxBudgetUsd.value),
+          includeRebooking: includeRebooking.checked
+        };
+        const res = await fetch('/api/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        lastResult = data;
+
+        if (!res.ok) {
+          badge.textContent = data.code || 'BLOCKED';
+          area.innerHTML = `<div class="step-item" style="border-color:var(--red);">
+            <div class="step-head"><span class="err">${data.error || 'Request blocked'}</span></div>
+            <div class="step-meta">${data.detail || ''}</div>
+          </div>`;
+        } else {
+          badge.textContent = data.status;
+          renderResult(data);
+        }
+        await loadStatus();
+      } catch (err) {
+        badge.textContent = 'ERROR';
+        area.innerHTML = `<div class="empty err">${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function renderResult(data) {
+      const stepsHtml = data.purchases.map((p, idx) => `
+        <div class="step-item">
+          <div class="step-head">
+            <span>${idx + 1}. ${esc(p.intent)}</span>
+            <span class="${p.ok ? 'ok' : 'err'}">${p.ok ? `PAID $${p.costUsd.toFixed(2)} USDC` : 'FAILED'} · ${p.latencyMs}ms</span>
+          </div>
+          <div class="step-meta">
+            Miner: ${esc(p.minerId || 'auto-routed')} |
+            Tx: ${p.txHash ? `<a href="https://sepolia.basescan.org/tx/${p.txHash}" target="_blank">${p.txHash.slice(0,14)}...${p.txHash.slice(-8)}</a>` : 'escrow / off-chain receipt'}
+          </div>
+          <div class="step-answer">${esc(p.answer || p.error || '(empty response)')}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('resultArea').innerHTML = `
+        <div class="cost-strip">
+          <div class="metric"><div class="k">Total Intel Cost</div><div class="v ok">$${data.totalCostUsd.toFixed(2)}</div></div>
+          <div class="metric"><div class="k">Budget Cap</div><div class="v">$${data.maxBudgetUsd.toFixed(2)}</div></div>
+          <div class="metric"><div class="k">Claim Value</div><div class="v">$${data.input.ticketPriceUsd}</div></div>
+          <div class="metric"><div class="k">Cost / Claim</div><div class="v">${((data.totalCostUsd / Math.max(1, data.input.ticketPriceUsd)) * 100).toFixed(4)}%</div></div>
+        </div>
+        <div class="step-list">${stepsHtml}</div>
+        <h2 style="margin-top:16px;">Ready-to-File Refund Claim Packet (with x402 Receipts)</h2>
+        <div class="claim-box">${esc(data.claimLetter)}</div>
+        <div class="actions">
+          <button type="button" onclick="copyClaim()">Copy Claim Letter</button>
+          <button type="button" onclick="downloadJson()">Download Full JSON Receipt</button>
+        </div>
+      `;
+    }
+
+    function copyClaim() {
+      if (!lastResult) return;
+      navigator.clipboard.writeText(lastResult.claimLetter);
+      alert('Claim letter + cryptographic receipts copied!');
+    }
+
+    function downloadJson() {
+      if (!lastResult) return;
+      const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `claimproof-${lastResult.claimId}.json`;
+      a.click();
+    }
+
+    loadStatus();
+  </script>
+</body>
+</html>
