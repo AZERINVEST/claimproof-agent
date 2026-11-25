@@ -36,29 +36,96 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 16px;
+      gap: 20px;
       flex-wrap: wrap;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 18px;
-      margin-bottom: 24px;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+    }
+    .brand {
+      flex: 1 1 360px;
+      min-width: 0;
     }
     .brand h1 {
       margin: 0;
-      font-size: 24px;
+      font-size: 23px;
       letter-spacing: -0.02em;
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
     }
     .badge {
       font-size: 11px;
       font-family: var(--mono);
-      padding: 3px 8px;
+      padding: 3px 9px;
       border-radius: 999px;
       background: rgba(56, 189, 248, 0.14);
       color: var(--accent);
       border: 1px solid rgba(56, 189, 248, 0.35);
     }
+    .badge.ok {
+      background: rgba(34, 197, 94, 0.14);
+      color: var(--green);
+      border-color: rgba(34, 197, 94, 0.4);
+    }
+    .badge.warn {
+      background: rgba(245, 158, 11, 0.14);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.4);
+    }
+    .badge.err {
+      background: rgba(239, 68, 68, 0.16);
+      color: var(--red);
+      border-color: rgba(239, 68, 68, 0.45);
+    }
+    .preset-btn.active {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+    }
+    .preset-btn.danger.active {
+      border-color: var(--red);
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+    }
+    .preflight {
+      margin-top: 12px;
+      padding: 8px 10px;
+      border-radius: 7px;
+      font-family: var(--mono);
+      font-size: 11px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .preflight.blocked {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: rgba(239, 68, 68, 0.08);
+      color: #fca5a5;
+    }
+    .ledger-bar {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .ledger-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      margin-top: 6px;
+      border-radius: 7px;
+      background: var(--card2);
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .ledger-item:hover { border-color: var(--accent); }
     .brand p {
       margin: 6px 0 0;
       color: var(--muted);
@@ -276,9 +343,9 @@
       <div class="card">
         <h2>Flight Disruption Input</h2>
         <div class="presets">
-          <button class="preset-btn" type="button" onclick="loadPreset('lh400')">LH400 FRA→JFK (EU261)</button>
-          <button class="preset-btn" type="button" onclick="loadPreset('ba117')">BA117 LHR→JFK (Cancel)</button>
-          <button class="preset-btn danger" type="button" onclick="loadPreset('cap')">Test Budget-Cap Failure</button>
+          <button class="preset-btn active" id="preset-lh400" type="button" onclick="loadPreset('lh400')">LH400 FRA→JFK (EU261)</button>
+          <button class="preset-btn" id="preset-ba117" type="button" onclick="loadPreset('ba117')">BA117 LHR→JFK (Cancel)</button>
+          <button class="preset-btn danger" id="preset-cap" type="button" onclick="loadPreset('cap')">Test Budget-Cap Failure</button>
         </div>
 
         <form id="claimForm">
@@ -342,12 +409,22 @@
           </div>
 
           <div class="checkbox-row">
-            <input type="checkbox" id="includeRebooking" checked />
+            <input type="checkbox" id="includeRebooking" checked onchange="updatePreflight()" />
             <label for="includeRebooking" style="margin:0;color:var(--text);">Also buy live rebooking availability (+$0.01)</label>
+          </div>
+
+          <div class="preflight" id="preflightBox">
+            <span>Est. x402 spend: <b>$0.03</b></span>
+            <span>Cap: <b>$0.03</b> · OK</span>
           </div>
 
           <button class="primary" id="runBtn" type="submit">Run Autonomous ClaimProof Agent</button>
         </form>
+
+        <div class="ledger-bar" id="ledgerBar" style="display:none;">
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Recent Verified Audit Runs (click to inspect)</div>
+          <div id="ledgerList"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -366,66 +443,117 @@
   </div>
 
   <script>
+    const $ = (id) => document.getElementById(id);
     let lastResult = null;
+    let ledgerRuns = [];
+
+    function setBadge(text, variant = '') {
+      const b = $('statusBadge');
+      b.textContent = text;
+      b.className = variant ? `badge ${variant}` : 'badge';
+    }
+
+    function updatePreflight() {
+      const planned = $('includeRebooking').checked ? 0.03 : 0.02;
+      const cap = Number($('maxBudgetUsd').value || 0);
+      const box = $('preflightBox');
+      if (planned > cap) {
+        box.className = 'preflight blocked';
+        box.innerHTML = `<span>Est. x402 spend: <b>$${planned.toFixed(2)}</b></span><span>Cap: <b>$${cap.toFixed(2)}</b> · WILL BLOCK ($0 spent)</span>`;
+      } else {
+        box.className = 'preflight';
+        box.innerHTML = `<span>Est. x402 spend: <b>$${planned.toFixed(2)}</b></span><span class="ok">Cap: <b>$${cap.toFixed(2)}</b> · WITHIN CAP</span>`;
+      }
+    }
+
+    $('maxBudgetUsd').addEventListener('input', updatePreflight);
 
     async function loadStatus() {
       try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        document.getElementById('wAddr').innerHTML = data.walletAddress
+        const [statusRes, ledgerRes] = await Promise.all([
+          fetch('/api/status'),
+          fetch('/api/ledger')
+        ]);
+        const data = await statusRes.json();
+        const lData = await ledgerRes.json();
+        ledgerRuns = lData.runs || [];
+
+        $('wAddr').innerHTML = data.walletAddress
           ? `<a href="https://sepolia.basescan.org/address/${data.walletAddress}" target="_blank">${data.walletAddress.slice(0,8)}...${data.walletAddress.slice(-6)}</a>`
           : '<span class="err">Not configured</span>';
         const balNum = Number(data.usdcBalance ?? 0);
-        document.getElementById('wBal').innerHTML = balNum >= 0.03
+        $('wBal').innerHTML = balNum >= 0.03
           ? `<span class="ok">$${balNum.toFixed(4)} USDC</span>`
           : `<span class="warn">$${balNum.toFixed(4)} USDC (fund at faucet.circle.com)</span>`;
-        document.getElementById('wSpent').textContent = `$${Number(data.ledgerTotalUsd ?? 0).toFixed(2)} (${data.ledgerCount ?? 0} runs)`;
+        $('wSpent').textContent = `$${Number(data.ledgerTotalUsd ?? 0).toFixed(2)} (${data.ledgerCount ?? 0} runs)`;
+
+        if (ledgerRuns.length > 0) {
+          $('ledgerBar').style.display = 'block';
+          $('ledgerList').innerHTML = ledgerRuns.slice(0, 4).map((r, i) => `
+            <div class="ledger-item" onclick="inspectRun(${i})">
+              <span>${esc(r.claimId)} · ${esc(r.input.flightNumber)} (${esc(r.input.origin)}→${esc(r.input.destination)})</span>
+              <span class="${r.status === 'CLAIM_READY' ? 'ok' : 'warn'}">$${Number(r.totalCostUsd).toFixed(2)} · ${esc(r.status)}</span>
+            </div>
+          `).join('');
+        }
       } catch (e) {
-        document.getElementById('wAddr').innerHTML = '<span class="err">Server error</span>';
+        $('wAddr').innerHTML = '<span class="err">Server error</span>';
       }
+    }
+
+    function inspectRun(index) {
+      const r = ledgerRuns[index];
+      if (!r) return;
+      lastResult = r;
+      setBadge(r.status, r.status === 'CLAIM_READY' ? 'ok' : 'warn');
+      renderResult(r);
     }
 
     function loadPreset(name) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = $('preset-' + name);
+      if (activeBtn) activeBtn.classList.add('active');
+
       if (name === 'lh400') {
-        flightNumber.value = 'LH400'; airline.value = 'Lufthansa';
-        origin.value = 'FRA'; destination.value = 'JFK';
-        ticketPriceUsd.value = 780; bookingRef.value = 'XK94LM';
-        maxBudgetUsd.value = '0.03'; includeRebooking.checked = true;
+        $('flightNumber').value = 'LH400'; $('airline').value = 'Lufthansa';
+        $('origin').value = 'FRA'; $('destination').value = 'JFK';
+        $('ticketPriceUsd').value = 780; $('bookingRef').value = 'XK94LM';
+        $('maxBudgetUsd').value = '0.03'; $('includeRebooking').checked = true;
       } else if (name === 'ba117') {
-        flightNumber.value = 'BA117'; airline.value = 'British Airways';
-        origin.value = 'LHR'; destination.value = 'JFK';
-        ticketPriceUsd.value = 940; bookingRef.value = 'BR72QP';
-        maxBudgetUsd.value = '0.03'; includeRebooking.checked = true;
+        $('flightNumber').value = 'BA117'; $('airline').value = 'British Airways';
+        $('origin').value = 'LHR'; $('destination').value = 'JFK';
+        $('ticketPriceUsd').value = 940; $('bookingRef').value = 'BR72QP';
+        $('maxBudgetUsd').value = '0.03'; $('includeRebooking').checked = true;
       } else if (name === 'cap') {
-        flightNumber.value = 'LH400'; airline.value = 'Lufthansa';
-        origin.value = 'FRA'; destination.value = 'JFK';
-        ticketPriceUsd.value = 780; bookingRef.value = 'CAP001';
-        maxBudgetUsd.value = '0.01'; includeRebooking.checked = true;
+        $('flightNumber').value = 'LH400'; $('airline').value = 'Lufthansa';
+        $('origin').value = 'FRA'; $('destination').value = 'JFK';
+        $('ticketPriceUsd').value = 780; $('bookingRef').value = 'CAP001';
+        $('maxBudgetUsd').value = '0.01'; $('includeRebooking').checked = true;
       }
+      updatePreflight();
     }
 
-    document.getElementById('claimForm').addEventListener('submit', async (e) => {
+    $('claimForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const btn = document.getElementById('runBtn');
-      const badge = document.getElementById('statusBadge');
-      const area = document.getElementById('resultArea');
+      const btn = $('runBtn');
+      const area = $('resultArea');
       btn.disabled = true;
-      badge.textContent = 'PURCHASING VIA X402...';
-      area.innerHTML = '<div class="empty">Signing x402 EIP-3009 authorizations and querying Telegraph Protocol miners on Base Sepolia... (10–30s)</div>';
+      setBadge('PURCHASING VIA X402...', 'warn');
+      area.innerHTML = '<div class="empty">Signing x402 EIP-3009 authorizations and querying Telegraph Protocol miners on Base Sepolia... (15–60s)</div>';
 
       try {
         const payload = {
-          flightNumber: flightNumber.value.trim(),
-          airline: airline.value.trim(),
-          origin: origin.value.trim().toUpperCase(),
-          destination: destination.value.trim().toUpperCase(),
-          date: date.value,
-          ticketPriceUsd: Number(ticketPriceUsd.value),
-          fareClass: fareClass.value,
-          bookingRef: bookingRef.value.trim(),
-          passengerName: passengerName.value.trim(),
-          maxBudgetUsd: Number(maxBudgetUsd.value),
-          includeRebooking: includeRebooking.checked
+          flightNumber: $('flightNumber').value.trim(),
+          airline: $('airline').value.trim(),
+          origin: $('origin').value.trim().toUpperCase(),
+          destination: $('destination').value.trim().toUpperCase(),
+          date: $('date').value,
+          ticketPriceUsd: Number($('ticketPriceUsd').value),
+          fareClass: $('fareClass').value,
+          bookingRef: $('bookingRef').value.trim(),
+          passengerName: $('passengerName').value.trim(),
+          maxBudgetUsd: Number($('maxBudgetUsd').value),
+          includeRebooking: $('includeRebooking').checked
         };
         const res = await fetch('/api/claim', {
           method: 'POST',
@@ -436,19 +564,19 @@
         lastResult = data;
 
         if (!res.ok) {
-          badge.textContent = data.code || 'BLOCKED';
-          area.innerHTML = `<div class="step-item" style="border-color:var(--red);">
-            <div class="step-head"><span class="err">${data.error || 'Request blocked'}</span></div>
-            <div class="step-meta">${data.detail || ''}</div>
+          setBadge(data.code || 'BLOCKED', 'err');
+          area.innerHTML = `<div class="step-item" style="border-color:var(--red);background:rgba(239,68,68,0.08);">
+            <div class="step-head"><span class="err">SAFETY GUARD TRIGGERED: ${esc(data.code || 'BLOCKED')}</span><span class="ok">$0.00 SPENT</span></div>
+            <div class="step-answer" style="margin-top:8px;border-color:rgba(239,68,68,0.35);">${esc(data.error || 'Request blocked')}\n\n${esc(data.detail || '')}</div>
           </div>`;
         } else {
-          badge.textContent = data.status;
+          setBadge(data.status, data.status === 'CLAIM_READY' ? 'ok' : 'warn');
           renderResult(data);
         }
         await loadStatus();
       } catch (err) {
-        badge.textContent = 'ERROR';
-        area.innerHTML = `<div class="empty err">${err.message}</div>`;
+        setBadge('ERROR', 'err');
+        area.innerHTML = `<div class="empty err">${esc(err.message)}</div>`;
       } finally {
         btn.disabled = false;
       }
