@@ -2,6 +2,8 @@
 
 > **Autonomous flight-disruption refund agent** that buys verified disruption reports, fare refund rules, and live rebooking availability via **Telegraph Protocol x402** (Base Sepolia USDC), enforces hard per-claim spending caps, and outputs a ready-to-file refund claim packet with cryptographic payment receipts attached.
 
+**Live 2-Minute Demo Video (1080p):** [Watch on YouTube — ClaimProof Agent Demo](https://youtu.be/2vrZ4oF3sQc)
+
 ---
 
 ## Why ClaimProof Exists (Commercial Summary)
